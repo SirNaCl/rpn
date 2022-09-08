@@ -5,23 +5,34 @@
 
 #define N (10)
 
+int error = 0;
+int top = -1;
+int c = 0;
+int line = 1;
+
 int readnum(int first)
 {
 	char num[20];
 	char curr[4];
 	sprintf(num, "%d", first - 48);
-	char c = getchar();
+	char ch = getchar();
 
-	while (isdigit(c))
+	while (isdigit(ch))
 	{
-		sprintf(curr, "%d", c - 48);
+		sprintf(curr, "%d", ch - 48);
 		strcat(num, curr);
-		c = getchar();
+		ch = getchar();
 	}
 
 	return atoi(num);
 }
 
+/**
+ * @brief Check if given integer represents a binary operator
+ *
+ * @param i integer to validate as operator
+ * @return 	int 1 if valid operator, 0 otherwise.
+ */
 int isop(int i)
 {
 	return i == '+' || i == '-' || i == '*' || i == '/';
@@ -30,98 +41,103 @@ int isop(int i)
 /**
  * @brief Performs given binary op c on the stack
  *
- * @param stack
- * @param top
- * @param c
- * @return int 1 if success, 0 on error (div-0)
+ * @param stack 	stack of number to perform operation on
+ * @param top		index for stack's top
+ * @param operator	binary operator to be handled
+ * @return 			int 1 if success, 0 on error (div/0)
  */
-int handle_op(int *stack, int top, int c)
+int handle_op(int *stack, int top, int operator)
 {
-	if (c == '+')
-	{
+	if (operator== '+')
 		stack[top - 1] += stack[top];
-	}
-	else if (c == '-')
-	{
+
+	else if (operator== '-')
 		stack[top - 1] -= stack[top];
-	}
-	else if (c == '*')
-	{
+
+	else if (operator== '*')
 		stack[top - 1] *= stack[top];
-	}
+
 	else // Division
 	{
 		if (stack[top] != 0)
-		{
-			stack[top - 1] = stack[top - 1] / stack[top];
-		}
-		else
-		{
+			stack[top - 1] /= stack[top];
+
+		else // Division by zero
 			return 0;
-		}
 	}
 	return 1;
 }
 
+/**
+ * @brief Report error and toggle error flag
+ *
+ */
+void err()
+{
+	printf("line %d: error at %c\n", line, c);
+	error = 1;
+}
+
+/**
+ * @brief Get the next non-space character from stdin
+ *
+ * @return int ascii representation of next non-space character
+ */
+int get_nonspace()
+{
+	int ns;
+	while ((ns = getchar()) == ' ')
+		continue;
+	return ns;
+}
+
 int main(void)
 {
-	int line = 1;
 	int *stack = calloc(N, sizeof(int));
-	int top = -1;
-	int c = 0;
-	int error = 0;
 
 	while (c != -1)
 	{
-		c = getchar();
+		// assign c, skip to next linebreak if error occured:
+		while ((c = get_nonspace()) != '\n' && error)
+			continue;
 
-		if (isdigit(c) && !error)
+		if (isdigit(c))
 		{
-			if (top < N - 1)
-			{
-				top++;
+			if (top++ < N - 1) // subtract one to adjust for top starting at 0
 				stack[top] = readnum(c);
-			}
+
+			// Too many numbers on the stack
 			else
-			{
-				// Too many numbers on the stack
-				printf("line %d: error at %c\n", line, c);
-				error = 1;
-				top = 0;
-			}
+				err();
 		}
-		else if (isop(c) && !error)
+		else if (isop(c))
 		{
 			if (top > 0 && handle_op(stack, top, c))
 				top--;
-			else
-			{
-				printf("line %d: error at %c\n", line, c);
-				error = 1;
-				top = 0;
-			}
+
+			else // 0 division or not enough numbers
+				err();
 		}
 		else if (c == '\n')
 		{
-			if (top != 0)
+			if (!error)
 			{
-				printf("line %d: error at \\n\n", line);
+				// Newline when zero or more than one numbers in stack
+				if (top)
+					printf("line %d: error at \\n\n", line);
+
+				// Successfully calculated line
+				else
+					printf("line %d: %d\n", line, stack[0]);
 			}
-			else if (!error)
-			{
-				printf("line %d: %d\n", line, stack[0]);
-			}
+			// Reset for next line
 			line++;
 			top = -1;
 			error = 0;
 		}
-		else if ((c != ' ' && c != -1) && !error)
-		{
-			// invalid character
-			printf("line %d: error at %c\n", line, c);
-			error = 1;
-			top = 0;
-		}
+		// invalid character (-1 = EOF)
+		else if (c != -1)
+			err();
 	}
 	free(stack);
 	return 0;
