@@ -9,7 +9,7 @@ int readnum(int first)
 {
 	char num[20];
 	char curr[4];
-	sprintf(num, "%d", first - 48);
+	// sprintf(num, "%d", first - 48);
 	char c = getchar();
 
 	while (isdigit(c))
